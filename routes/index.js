@@ -1,0 +1,104 @@
+const mongoService = require('../services/mongoService');
+const passport = require('passport');
+module.exports = (app) =>{
+    app.post("/register",function(req,res,next){
+        console.log(req.body);
+        mongoService.getUser(req.body.email).then(account=>{
+            if(!account){
+                mongoService.register(req.body).then(data=>{
+                    passport.authenticate('local')(req, res, function () {
+                        res.send({'result':'success','data':req.user});
+                    }); 
+                });
+                
+            }
+            else{
+                res.send({'result':'duplicate'});
+            }
+        });  
+    });
+    app.post("/login",passport.authenticate('local'),function(req, res) {
+        res.send({'result':'success','data':req.user});
+      });
+    app.post("/add-store",function(req,res){
+        mongoService.saveStore(req.body).then(data=>{
+            res.send('ok');
+        });
+    });
+    app.post("/add-product",function(req,res){
+        mongoService.saveProduct(req.body).then(data=>{
+            res.send('ok');
+        });
+    });
+    app.post("/addProductToCart",function(req,res){
+       mongoService.getCart(req.body).then((cart)=>{
+           if(!cart){
+            mongoService.addProductToCart(req.body).then(data=>{
+                res.send({'result':'success'});
+            });
+           }
+           else{
+               res.send({'result':'duplicate'});
+           }
+       });
+    });
+    app.post("/deleteProduct",function(req,res){
+        mongoService.deleteProductFromCart(req.body).then(data=>{
+            res.send({'result':'success'});
+        })
+     });
+    app.post("/buy",function(req,res){
+        mongoService.buy(req.body).then(data=>{
+            if(data==true){
+                mongoService.reward(req.body).then(rs=>{
+                    res.send({'result':'success','data':rs});
+                })
+            }
+            else{
+                res.send({'result':'error'});
+            }
+        })
+    })
+    app.get('/getCartbyUser',function(req,res){
+        mongoService.getCartByUser(req.query.userid).then(data=>{
+            console.log(data);
+            res.send(data);
+        });
+    });
+    app.get('/productsByStore',function(req,res){
+        mongoService.getProductsByStore(req.query.sid).then(data=>{
+        res.send(data);    
+        })
+    });
+    app.get('/productById',function(req,res){
+        console.log(req.query.pid);
+        mongoService.getProductById(req.query.pid).then(data=>{
+            console.log(data);
+            res.send(data);
+        });
+    })
+    app.get('/products',function(req,res){
+        console.log(req.query.skip);
+        mongoService.getProducts(Number(req.query.skip)).then(data=>{
+            console.log(data);
+            res.send(data);
+        })
+    });
+    app.get('/stores',function(req,res){
+        
+        mongoService.getStores(Number(req.query.skip)).then(data=>{
+            console.log(data);
+            res.send(data);
+        })
+    });
+    app.get("/update",function(req,res){
+        mongoService.updateProducts().then(data=>{
+            res.send(data);
+        })
+    })
+    app.get("/logout",function(req,res){
+        req.logout();
+        res.send('logged out');
+    });
+    
+}
